@@ -75,6 +75,28 @@ to show PID/host/trace_id for ops.
 A cron fires on each replica every hour; only one should actually
 do the work.
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant R1 as Replica 1
+    participant R2 as Replica 2
+    participant R3 as Replica 3
+    participant L as Lock backend<br/>(Redis / Postgres / etcd)
+
+    Note over R1,R3: Midnight tick — all 3 wake up
+    R1->>L: Acquire("midnight-billing")
+    R2->>L: Acquire("midnight-billing")
+    R3->>L: Acquire("midnight-billing")
+    L-->>R1: ✅ holder (winner)
+    L-->>R2: ❌ ErrLocked
+    L-->>R3: ❌ ErrLocked
+    Note over R2,R3: skip silently (return nil)
+    Note over R1: runs the actual job
+    R1->>R1: processBilling()
+    R1->>L: Release()
+    L-->>R1: ok
+```
+
 **Backend.** Whichever distributed primitive you already have:
 - `pglock` if you run Postgres (cleanest crash story; no TTL).
 - `redislock` if you run Redis (fast; tune TTL).

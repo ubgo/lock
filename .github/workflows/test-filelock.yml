@@ -40,3 +40,9 @@ jobs:
           name: cover-filelock
           path: filelock/cover.out
           if-no-files-found: ignore
+      - if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        with:
+          files: filelock/cover.out
+          flags: filelock
+          fail_ci_if_error: false

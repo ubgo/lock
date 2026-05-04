@@ -40,3 +40,9 @@ jobs:
           name: cover-redislock
           path: redislock/cover.out
           if-no-files-found: ignore
+      - if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        with:
+          files: redislock/cover.out
+          flags: redislock
+          fail_ci_if_error: false

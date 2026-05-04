@@ -53,3 +53,8 @@ jobs:
           name: cover-pglock
           path: pglock/cover.out
           if-no-files-found: ignore
+      - uses: codecov/codecov-action@v5
+        with:
+          files: pglock/cover.out
+          flags: pglock
+          fail_ci_if_error: false

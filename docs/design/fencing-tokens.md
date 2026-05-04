@@ -46,22 +46,29 @@ time**. The downstream consumer (S3 / DB / queue) records the
 **highest token it has seen** and rejects writes whose token is
 less than that.
 
-```
-Time
-  |
-  |  Process A acquires lock — token=42
-  |
-  |  Process A pauses
-  |
-  |  TTL expires
-  |
-  |  Process B acquires lock — token=43 (monotonic)
-  |
-  |  Process B writes "state X" with token=43
-  |  Consumer records highest=43
-  |
-  |  Process A wakes up, writes "state Y" with token=42
-  |  Consumer sees 42 < 43 → REJECTS A's write
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Process A
+    participant L as Lock backend
+    participant B as Process B
+    participant S as Downstream consumer<br/>(S3 / DB / queue)
+
+    A->>L: Acquire("payment-export")
+    L-->>A: holder (token=42)
+    Note over A: A starts work, then GC pauses ⏸
+    Note over L: TTL expires; key gone
+
+    B->>L: Acquire("payment-export")
+    L-->>B: holder (token=43)
+    B->>S: write(data, token=43)
+    Note over S: highest_seen ← 43
+    S-->>B: ✅ accepted
+
+    Note over A: A resumes ▶
+    A->>S: write(stale_data, token=42)
+    Note over S: 42 < highest_seen=43
+    S-->>A: ❌ REJECTED
 ```
 
 A's write is no-op'd at the consumer. Correctness preserved.

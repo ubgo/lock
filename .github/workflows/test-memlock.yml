@@ -34,3 +34,9 @@ jobs:
           go-version: "1.24"
       - run: go vet ./...
       - run: go test -race -coverprofile=cover.out ./...
+      - if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        with:
+          files: memlock/cover.out
+          flags: memlock
+          fail_ci_if_error: false

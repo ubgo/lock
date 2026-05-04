@@ -1,0 +1,50 @@
+# Codecov configuration for the ubgo/lock monorepo.
+# Each Go module under this repo has its own coverage flag so the
+# combined report shows per-backend coverage.
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto         # don't drop coverage by more than 1%
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+
+comment:
+  layout: "diff, flags, files"
+  behavior: default
+  require_changes: false
+
+flags:
+  root:
+    paths:
+      - lock.go
+      - observe.go
+  filelock:
+    paths:
+      - filelock/
+  flock:
+    paths:
+      - flock/
+  memlock:
+    paths:
+      - memlock/
+  redislock:
+    paths:
+      - redislock/
+  pglock:
+    paths:
+      - pglock/
+  etcdlock:
+    paths:
+      - etcdlock/
+  gocronlock:
+    paths:
+      - contrib/gocronlock/
+
+ignore:
+  - "**/*_test.go"
+  - "**/example_test.go"
+  - "**/extras_test.go"

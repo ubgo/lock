@@ -29,3 +29,8 @@ jobs:
           go-version: "1.24"
       - run: go vet ./...
       - run: go test -race -coverprofile=cover.out ./...
+      - uses: codecov/codecov-action@v5
+        with:
+          files: contrib/gocronlock/cover.out
+          flags: gocronlock
+          fail_ci_if_error: false

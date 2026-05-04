@@ -78,6 +78,11 @@ jobs:
           name: cover-etcdlock
           path: etcdlock/cover.out
           if-no-files-found: ignore
+      - uses: codecov/codecov-action@v5
+        with:
+          files: etcdlock/cover.out
+          flags: etcdlock
+          fail_ci_if_error: false
 
   cross-build:
     runs-on: ubuntu-latest

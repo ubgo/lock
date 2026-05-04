@@ -1,9 +1,68 @@
-# lock
+# ubgo/lock
 
-> A family of named-mutex implementations for Go — single-host
-> (`filelock`, `flock`) and distributed (`redislock`, `pglock`,
-> `etcdlock`) — sharing one tiny `Locker` interface so caller code
-> swaps backends without changing.
+> **One interface, five backends.** Pick `filelock`, `flock`,
+> Redis, Postgres, or etcd. Swap them with one line.
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/ubgo/lock.svg)](https://pkg.go.dev/github.com/ubgo/lock)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ubgo/lock)](https://goreportcard.com/report/github.com/ubgo/lock)
+[![codecov](https://codecov.io/gh/ubgo/lock/graph/badge.svg)](https://codecov.io/gh/ubgo/lock)
+[![CI](https://github.com/ubgo/lock/actions/workflows/lint.yml/badge.svg)](https://github.com/ubgo/lock/actions)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Latest tag](https://img.shields.io/github/v/tag/ubgo/lock?sort=semver)](https://github.com/ubgo/lock/tags)
+
+A family of named-mutex implementations for Go. Single-host
+(`filelock`, `flock`) and distributed (`redislock`, `pglock`,
+`etcdlock`) backends share one tiny `Locker` interface — your
+caller code swaps backends without changing. Crash recovery,
+fencing tokens, semaphore mode, and observability hooks ship
+with every backend out of the box.
+
+## Table of contents
+
+- [The family at a glance](#the-family-at-a-glance)
+- [Why another lock library?](#why-another-lock-library)
+- [Pick a backend in 30 seconds](#pick-a-backend-in-30-seconds)
+- [Comparison matrix](#comparison-matrix)
+- [TL;DR for each backend](#tldr-for-each-backend)
+- [60-second tour: code that works for every backend](#60-second-tour-code-that-works-for-every-backend)
+- [End-to-end use cases](#end-to-end-use-cases)
+- [Migrating from a one-off lock library](#migrating-from-a-one-off-lock-library)
+- [What's not in scope](#whats-not-in-scope)
+- [Documentation](#documentation)
+
+## The family at a glance
+
+```mermaid
+graph TB
+    subgraph Interface["github.com/ubgo/lock"]
+        I[lock.Locker<br/>lock.Holder<br/>lock.ErrLocked]
+    end
+    subgraph Single host
+        FL["filelock<br/><i>marker file</i>"]
+        FK["flock<br/><i>flock(2) / LockFileEx</i>"]
+    end
+    subgraph Distributed
+        RL["redislock<br/><i>SET NX EX + Lua</i>"]
+        PL["pglock<br/><i>pg_try_advisory_lock</i>"]
+        EL["etcdlock<br/><i>lease + concurrency.Mutex</i>"]
+    end
+    subgraph Tests + integration
+        ML["memlock<br/><i>in-memory drop-in</i>"]
+        GC["contrib/gocronlock<br/><i>gocron v2 adapter</i>"]
+    end
+    FL ---|AsLocker| I
+    FK ---|AsLocker| I
+    RL ---|AsLocker| I
+    PL ---|AsLocker| I
+    EL ---|AsLocker| I
+    ML ---|AsLocker| I
+    GC -.wraps.-> I
+```
+
+Each subpath is its **own Go module** with its own `go.mod`. Importing
+`github.com/ubgo/lock/redislock` pulls only Redis deps; importing
+`github.com/ubgo/lock/pglock` pulls only Postgres deps. **No
+forced-deps; no kitchen sink.**
 
 ```
 github.com/ubgo/lock                           interface  (this module)
@@ -15,11 +74,6 @@ github.com/ubgo/lock/etcdlock                  etcd lease + Mutex
 github.com/ubgo/lock/memlock                   in-memory test backend
 github.com/ubgo/lock/contrib/gocronlock        gocron v2 adapter
 ```
-
-Each subpath is its **own Go module** with its own `go.mod`. Importing
-`github.com/ubgo/lock/redislock` pulls only Redis deps; importing
-`github.com/ubgo/lock/pglock` pulls only Postgres deps. **No
-forced-deps; no kitchen sink.**
 
 ## Why another lock library?
 
@@ -50,15 +104,22 @@ swap mechanisms when your infra changes (single-host → distributed).
 
 ## Pick a backend in 30 seconds
 
-```
-Single machine?
-├── yes → Need operator-readable markers / semaphore / fencing tokens?
-│        ├── yes → filelock                (rich operator-facing surface)
-│        └── no  → flock                   (smaller API, kernel handles crash safety)
-└── no  → Already running…
-         ├── Postgres? → pglock            (cleanest crash story; no TTL)
-         ├── Redis?    → redislock         (AP; tune TTL)
-         └── etcd?     → etcdlock          (CP; FIFO fairness; mod_revision fence)
+```mermaid
+flowchart TD
+    Start([Need a lock?]) --> SingleHost{Single host?}
+    SingleHost -- yes --> SingleHostQ{Need<br/>operator-readable markers<br/>/ semaphore<br/>/ fencing tokens?}
+    SingleHostQ -- yes --> filelock(["filelock<br/><i>rich operator surface</i>"])
+    SingleHostQ -- no --> flock(["flock<br/><i>smaller API, kernel-fenced</i>"])
+    SingleHost -- no --> Infra{Already running...}
+    Infra -- Postgres --> pglock(["pglock<br/><i>no TTL, session-tied</i>"])
+    Infra -- Redis --> redislock(["redislock<br/><i>AP, tune TTL</i>"])
+    Infra -- etcd --> etcdlock(["etcdlock<br/><i>CP, mod_revision fence</i>"])
+    Infra -- nothing yet --> WhichInfra((operationally<br/>justify adding<br/>infra))
+    style filelock fill:#dbeafe,stroke:#3b82f6,color:#000
+    style flock fill:#dbeafe,stroke:#3b82f6,color:#000
+    style pglock fill:#dcfce7,stroke:#22c55e,color:#000
+    style redislock fill:#dcfce7,stroke:#22c55e,color:#000
+    style etcdlock fill:#dcfce7,stroke:#22c55e,color:#000
 ```
 
 For unit tests, every backend has the same shape — substitute
@@ -73,11 +134,12 @@ For unit tests, every backend has the same shape — substitute
 | **Need extra infra** | none | none | Redis | Postgres | etcd cluster |
 | **TTL to tune** | optional | none | yes | none | yes |
 | **Reentrant** | no | no | no | **yes** (PG native) | no |
-| **Fencing tokens** | per-name sidecar | (planned) | per-name INCR | n/a | mod_revision (global) |
-| **Semaphore (N holders)** | ✅ | (planned) | (planned) | (planned) | (planned) |
+| **Fencing tokens** | per-name sidecar | per-name sidecar | per-name INCR | per-session txid | **mod_revision (global)** |
+| **Semaphore (`WithMaxConcurrent`)** | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Sweep** | ✅ | n/a (kernel cleans) | n/a (TTL cleans) | n/a (session cleans) | n/a (lease cleans) |
 | **Operator visibility** | rich marker fields | none | `redis-cli GET <key>` | `pg_locks` view | `etcdctl get <key>` |
-| **Observability** | metrics + tracing + slog hooks | (planned) | (planned) | (planned) | (planned) |
+| **Observability hooks** | ✅ slog/metrics/spans | ✅ same | ✅ same | ✅ same | ✅ same |
+| **TraceID propagation** | marker debug field | slog field | embedded in SET value | via `application_name` | in lock key value |
 | **Strong consistency** | local-fs only | local-fs only | weakly (AP) | ACID single primary | ✅ Raft |
 
 ## TL;DR for each backend

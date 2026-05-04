@@ -4,14 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'lock.go'
-      - 'lock_test.go'
+      - '*.go'
       - 'go.mod'
       - '.github/workflows/test-root.yml'
   pull_request:
     paths:
-      - 'lock.go'
-      - 'lock_test.go'
+      - '*.go'
       - 'go.mod'
       - '.github/workflows/test-root.yml'
 
@@ -43,3 +41,9 @@ jobs:
           name: cover-root
           path: cover.out
           if-no-files-found: ignore
+      - if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./cover.out
+          flags: root
+          fail_ci_if_error: false

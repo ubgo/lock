@@ -170,6 +170,31 @@ When `Acquire` finds an existing marker, it:
 6. If inconclusive (EPERM, host mismatch, platform doesn't expose
    start_time) → fall through to Layer 2.
 
+```mermaid
+flowchart TD
+    A[Acquire finds existing marker] --> B{Read marker:<br/>pid, pid_start, host}
+    B --> C{host == local?}
+    C -- no --> Inc((Inconclusive))
+    C -- yes --> D[OS probe pid]
+    D --> E{alive?}
+    E -- ESRCH<br/>(no such process) --> Dead((Dead → take over))
+    E -- EPERM<br/>(other user) --> Inc
+    E -- yes --> F{pid_start matches<br/>OS-reported start?}
+    F -- yes --> Held((Alive → ErrLocked))
+    F -- no<br/>(PID reused) --> Dead
+    F -- start_time<br/>not available --> Inc
+    Inc --> G{Strategy?}
+    G -- PIDFirst<br/>+ WithStaleAfter set --> H{marker.acquired<br/>older than window?}
+    G -- PIDOnly --> Held
+    G -- TimeOnly --> H
+    H -- yes --> StaleTake((Stale → take over))
+    H -- no --> Held
+    style Held fill:#fee2e2,stroke:#dc2626,color:#000
+    style Dead fill:#dcfce7,stroke:#16a34a,color:#000
+    style StaleTake fill:#dcfce7,stroke:#16a34a,color:#000
+    style Inc fill:#fef3c7,stroke:#d97706,color:#000
+```
+
 ### Layer 2: WithStaleAfter time fallback
 
 If the PID probe was inconclusive, check whether the marker's

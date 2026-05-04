@@ -40,3 +40,9 @@ jobs:
           name: cover-flock
           path: flock/cover.out
           if-no-files-found: ignore
+      - if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        with:
+          files: flock/cover.out
+          flags: flock
+          fail_ci_if_error: false
