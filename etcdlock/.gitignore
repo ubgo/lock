@@ -1,0 +1,31 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+bin/
+
+# Test + coverage outputs
+*.test
+*.out
+cover.out
+cover.html
+coverage.*
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go workspace local files
+go.work.sum
+
+# Build artifacts
+dist/
+build/

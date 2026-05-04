@@ -1,0 +1,20 @@
+version: 2
+
+# Manual-only Dependabot.
+#
+# Each updates entry has open-pull-requests-limit: 0 so Dependabot does NOT
+# open PRs on the scheduled interval. To trigger an update PR by hand:
+#
+#   1. Go to Insights -> Dependency graph -> Dependabot
+#   2. Click "Recent update jobs" or the entry you care about
+#   3. Click "Check for updates" — Dependabot scans and opens PRs on demand
+#
+# Schedule is still required as a config field, set to yearly to minimise
+# any background scanning.
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "yearly"
+    open-pull-requests-limit: 0

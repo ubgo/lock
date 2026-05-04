@@ -1,0 +1,31 @@
+name: test contrib/gocronlock
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'contrib/gocronlock/**'
+      - '.github/workflows/test-contrib-gocronlock.yml'
+  pull_request:
+    paths:
+      - 'contrib/gocronlock/**'
+      - '.github/workflows/test-contrib-gocronlock.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+    working-directory: contrib/gocronlock
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+      - run: go vet ./...
+      - run: go test -race -coverprofile=cover.out ./...

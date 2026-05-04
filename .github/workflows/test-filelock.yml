@@ -1,0 +1,42 @@
+name: test filelock
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'filelock/**'
+      - '.github/workflows/test-filelock.yml'
+  pull_request:
+    paths:
+      - 'filelock/**'
+      - '.github/workflows/test-filelock.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+    working-directory: filelock
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+      - run: go vet ./...
+      - run: go test -race -coverprofile=cover.out ./...
+      - if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: cover-filelock
+          path: filelock/cover.out
+          if-no-files-found: ignore

@@ -1,0 +1,55 @@
+name: test pglock
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pglock/**'
+      - '.github/workflows/test-pglock.yml'
+  pull_request:
+    paths:
+      - 'pglock/**'
+      - '.github/workflows/test-pglock.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+    working-directory: pglock
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pglock
+          POSTGRES_PASSWORD: pglock
+          POSTGRES_DB: pglock_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+      - run: go vet ./...
+      - run: go build ./...
+      - env:
+          PGLOCK_TEST_DSN: postgres://pglock:pglock@localhost:5432/pglock_test?sslmode=disable
+        run: go test -race -coverprofile=cover.out ./...
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cover-pglock
+          path: pglock/cover.out
+          if-no-files-found: ignore

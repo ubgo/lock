@@ -1,0 +1,96 @@
+name: test etcdlock
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'etcdlock/**'
+      - '.github/workflows/test-etcdlock.yml'
+  pull_request:
+    paths:
+      - 'etcdlock/**'
+      - '.github/workflows/test-etcdlock.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+    working-directory: etcdlock
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # We don't use a `services:` etcd block — quay.io/coreos/etcd is a
+    # scratch-built image with no /bin/sh, so docker --health-cmd
+    # (which always wraps in sh -c) can never succeed. We start etcd
+    # ourselves via a step and poll for readiness from the runner side.
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+
+      - name: start etcd
+        working-directory: ${{ github.workspace }}
+        run: |
+          docker run -d --name etcd \
+            -p 2379:2379 -p 2380:2380 \
+            -e ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379 \
+            -e ETCD_ADVERTISE_CLIENT_URLS=http://0.0.0.0:2379 \
+            -e ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380 \
+            -e ETCD_INITIAL_ADVERTISE_PEER_URLS=http://0.0.0.0:2380 \
+            -e ETCD_INITIAL_CLUSTER=default=http://0.0.0.0:2380 \
+            quay.io/coreos/etcd:v3.5.16
+
+      - name: wait for etcd
+        working-directory: ${{ github.workspace }}
+        run: |
+          for i in $(seq 1 30); do
+            if docker exec etcd etcdctl --endpoints=http://127.0.0.1:2379 endpoint health 2>/dev/null; then
+              echo "etcd ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "etcd did not become healthy in 30s"
+          docker logs etcd
+          exit 1
+
+      - run: go vet ./...
+
+      - run: go build ./...
+
+      - env:
+          ETCDLOCK_TEST_ENDPOINTS: localhost:2379
+        run: go test -race -coverprofile=cover.out ./...
+
+      - name: stop etcd
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: docker rm -f etcd || true
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cover-etcdlock
+          path: etcdlock/cover.out
+          if-no-files-found: ignore
+
+  cross-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+      - working-directory: etcdlock
+        env:
+          GOOS: ${{ matrix.goos }}
+        run: go build ./...

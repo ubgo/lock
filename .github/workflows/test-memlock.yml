@@ -1,0 +1,36 @@
+name: test memlock
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'memlock/**'
+      - '.github/workflows/test-memlock.yml'
+  pull_request:
+    paths:
+      - 'memlock/**'
+      - '.github/workflows/test-memlock.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+    working-directory: memlock
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+      - run: go vet ./...
+      - run: go test -race -coverprofile=cover.out ./...
