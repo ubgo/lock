@@ -1,15 +1,19 @@
+# Manual only (owner's call, 2026-10-13: Actions minutes are a budget). To run automatically again, replace the on: block with:
+#   on:
+#     push:
+#       branches: [main]
+#       paths:
+#         - 'redislock/**'
+#         - '.github/workflows/test-redislock.yml'
+#     pull_request:
+#       paths:
+#         - 'redislock/**'
+#         - '.github/workflows/test-redislock.yml'
+
 name: test redislock
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'redislock/**'
-      - '.github/workflows/test-redislock.yml'
-  pull_request:
-    paths:
-      - 'redislock/**'
-      - '.github/workflows/test-redislock.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

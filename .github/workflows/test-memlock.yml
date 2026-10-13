@@ -1,15 +1,19 @@
+# Manual only (owner's call, 2026-10-13: Actions minutes are a budget). To run automatically again, replace the on: block with:
+#   on:
+#     push:
+#       branches: [main]
+#       paths:
+#         - 'memlock/**'
+#         - '.github/workflows/test-memlock.yml'
+#     pull_request:
+#       paths:
+#         - 'memlock/**'
+#         - '.github/workflows/test-memlock.yml'
+
 name: test memlock
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'memlock/**'
-      - '.github/workflows/test-memlock.yml'
-  pull_request:
-    paths:
-      - 'memlock/**'
-      - '.github/workflows/test-memlock.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

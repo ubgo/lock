@@ -1,15 +1,19 @@
+# Manual only (owner's call, 2026-10-13: Actions minutes are a budget). To run automatically again, replace the on: block with:
+#   on:
+#     push:
+#       branches: [main]
+#       paths:
+#         - 'etcdlock/**'
+#         - '.github/workflows/test-etcdlock.yml'
+#     pull_request:
+#       paths:
+#         - 'etcdlock/**'
+#         - '.github/workflows/test-etcdlock.yml'
+
 name: test etcdlock
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'etcdlock/**'
-      - '.github/workflows/test-etcdlock.yml'
-  pull_request:
-    paths:
-      - 'etcdlock/**'
-      - '.github/workflows/test-etcdlock.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

@@ -1,15 +1,19 @@
+# Manual only (owner's call, 2026-10-13: Actions minutes are a budget). To run automatically again, replace the on: block with:
+#   on:
+#     push:
+#       branches: [main]
+#       paths:
+#         - 'filelock/**'
+#         - '.github/workflows/test-filelock.yml'
+#     pull_request:
+#       paths:
+#         - 'filelock/**'
+#         - '.github/workflows/test-filelock.yml'
+
 name: test filelock
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'filelock/**'
-      - '.github/workflows/test-filelock.yml'
-  pull_request:
-    paths:
-      - 'filelock/**'
-      - '.github/workflows/test-filelock.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

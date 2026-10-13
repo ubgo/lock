@@ -1,17 +1,21 @@
+# Manual only (owner's call, 2026-10-13: Actions minutes are a budget). To run automatically again, replace the on: block with:
+#   on:
+#     push:
+#       branches: [main]
+#       paths:
+#         - '*.go'
+#         - 'go.mod'
+#         - '.github/workflows/test-root.yml'
+#     pull_request:
+#       paths:
+#         - '*.go'
+#         - 'go.mod'
+#         - '.github/workflows/test-root.yml'
+
 name: test root
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '*.go'
-      - 'go.mod'
-      - '.github/workflows/test-root.yml'
-  pull_request:
-    paths:
-      - '*.go'
-      - 'go.mod'
-      - '.github/workflows/test-root.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

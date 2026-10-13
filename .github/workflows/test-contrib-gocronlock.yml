@@ -1,15 +1,19 @@
+# Manual only (owner's call, 2026-10-13: Actions minutes are a budget). To run automatically again, replace the on: block with:
+#   on:
+#     push:
+#       branches: [main]
+#       paths:
+#         - 'contrib/gocronlock/**'
+#         - '.github/workflows/test-contrib-gocronlock.yml'
+#     pull_request:
+#       paths:
+#         - 'contrib/gocronlock/**'
+#         - '.github/workflows/test-contrib-gocronlock.yml'
+
 name: test contrib/gocronlock
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'contrib/gocronlock/**'
-      - '.github/workflows/test-contrib-gocronlock.yml'
-  pull_request:
-    paths:
-      - 'contrib/gocronlock/**'
-      - '.github/workflows/test-contrib-gocronlock.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
